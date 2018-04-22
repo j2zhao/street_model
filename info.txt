@@ -1,0 +1,7 @@
+input layer : 1024 (32*32) nodes
+first convolution layer : (5x5) -> convolution size with 32 filter
+first max-pooling layer : pool 2x2
+second convolution layer : (5x5) -> convolution size with 64 filter
+second max-pooling layer: pool 2x2
+third fully-connected layer : 1024 nodes
+output layer : 10 nodes

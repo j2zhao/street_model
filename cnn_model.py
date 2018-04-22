@@ -1,36 +1,90 @@
 # Some code was borrowed from https://github.com/petewarden/tensorflow_makefile/blob/master/tensorflow/models/image/mnist/convolutional.py
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-
 import tensorflow as tf
-import tensorflow.contrib.slim as slim
+import numpy as np
+from enum import Enum
 
-# Create model of CNN with slim api
+def create_weights(shape):
+    '''Create a convolution filter variable with the specified name and shape,
+    and initialize it using Xavier initialition.'''
+    initializer = tf.contrib.layers.xavier_initializer_conv2d()
+    variable = tf.Variable(initializer(shape=shape))
+    return variable
+
+def create_biases(shape):
+    '''Create a bias variable with the specified name and shape and initialize
+    it to zero.'''
+    initializer = tf.constant_initializer(value=0.0, dtype=tf.float32)
+    return tf.Variable(initializer(shape=shape))
+
+def create_flatten_layer(layer):
+    layer_shape = layer.get_shape()
+    num_features = layer_shape[1:4].num_elements()
+    layer = tf.reshape(layer, [-1, num_features])
+    return layer
+
+# Create model CNN
+# type = 
 def CNN(inputs, is_training=True):
-    batch_norm_params = {'is_training': is_training, 'decay': 0.9, 'updates_collections': None}
-    with slim.arg_scope([slim.conv2d, slim.fully_connected],
-                        normalizer_fn=slim.batch_norm,
-                        normalizer_params=batch_norm_params):
-        x = tf.reshape(inputs, [-1, 28, 28, 1])
+    inputs = tf.reshape(inputs, [-1, 32, 32, 3])
+    with tf.variable_scope('conv1a') as scope:
+        weights = create_weights(shape=[5, 5, 3, 32])
+        biases = create_biases([32])
+        layer = tf.nn.conv2d(input=inputs,
+                     filter= weights,
+                     strides=[1, 1, 1, 1],
+                     padding='SAME')
+        layer = tf.nn.bias_add(layer, biases)
+        conv1 = tf.nn.relu(layer, name= scope.name)
 
-        # For slim.conv2d, default argument values are like
-        # normalizer_fn = None, normalizer_params = None, <== slim.arg_scope changes these arguments
-        # padding='SAME', activation_fn=nn.relu,
-        # weights_initializer = initializers.xavier_initializer(),
-        # biases_initializer = init_ops.zeros_initializer,
-        net = slim.conv2d(x, 32, [5, 5], scope='conv1')
-        net = slim.max_pool2d(net, [2, 2], scope='pool1')
-        net = slim.conv2d(net, 64, [5, 5], scope='conv2')
-        net = slim.max_pool2d(net, [2, 2], scope='pool2')
-        net = slim.flatten(net, scope='flatten3')
+    with tf.variable_scope('conv2') as scope:
+        weights = create_weights(shape=[5, 5, 32, 32])
+        biases = create_biases([32])
+        layer = tf.nn.conv2d(input=conv1,
+                     filter=weights,
+                     strides=[1, 1, 1, 1],
+                     padding='SAME')
+        layer = tf.nn.bias_add(layer, biases)
+        conv2 = tf.nn.relu(layer, name=scope.name)
 
-        # For slim.fully_connected, default argument values are like
-        # activation_fn = nn.relu,
-        # normalizer_fn = None, normalizer_params = None, <== slim.arg_scope changes these arguments
-        # weights_initializer = initializers.xavier_initializer(),
-        # biases_initializer = init_ops.zeros_initializer,
-        net = slim.fully_connected(net, 1024, scope='fc3')
-        net = slim.dropout(net, is_training=is_training, scope='dropout3')  # 0.5 by default
-        outputs = slim.fully_connected(net, 10, activation_fn=None, normalizer_fn=None, scope='fco')
+    with tf.variable_scope('pool2') as scope:
+        pool2 = tf.nn.max_pool(conv2, ksize=[1, 3, 3, 1], strides=[1, 2, 2, 1],
+                         padding='SAME', name=scope.name)
+
+    with tf.variable_scope('conv3') as scope:
+        weights = create_weights(shape=[5, 5, 32, 64])
+        biases = create_biases([64])
+        layer = tf.nn.conv2d(input=pool2,
+                     filter=weights,
+                     strides=[1, 1, 1, 1],
+                     padding='SAME')
+        layer = tf.nn.bias_add(layer, biases)
+        conv3 = tf.nn.relu(layer, name=scope.name)
+
+    with tf.variable_scope('pool3') as scope:
+        pool3 = tf.nn.max_pool(conv3, ksize=[1, 3, 3, 1], strides=[1, 2, 2, 1],
+                         padding='SAME', name=scope.name)
+    
+    with tf.variable_scope('flatten4') as scope:
+        layer_shape = pool3.get_shape()
+        num_features = layer_shape[1:].num_elements()
+        flatten4 = tf.reshape(pool3, [-1, num_features], name=scope.name)
+    
+    with tf.variable_scope('fc4') as scope:
+        weights = create_weights(shape=[num_features, 1024])
+        biases = create_biases([1024])
+        fc4 = tf.matmul(flatten4, weights) + biases
+
+    with tf.variable_scope('fc5') as scope:
+        weights = create_weights(shape=[1024, 10])
+        biases = create_biases([10])
+        outputs = tf.matmul(fc4, weights) + biases
     return outputs
+
+def loss(logits, labels):
+    loss = tf.nn.softmax_cross_entropy_with_logits(
+                logits=logits,
+                labels=labels)
+    loss = tf.reshape(loss, [-1])
+    loss = tf.reduce_sum(loss)
+    tf.summary.scalar('loss', loss)
+    return loss

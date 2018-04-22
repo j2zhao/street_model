@@ -1,0 +1,126 @@
+# Some code was borrowed from https://github.com/petewarden/tensorflow_makefile/blob/master/tensorflow/models/image/mnist/convolutional.py
+import tensorflow as tf
+import numpy as np
+from enum import Enum
+import utility
+
+def raise_Error():
+    raise ValueError("Unsupported Type")
+
+def create_weights(shape):
+    '''Create a convolution filter variable with the specified name and shape,
+    and initialize it using Xavier initialition.'''
+    initializer = tf.contrib.layers.xavier_initializer_conv2d()
+    variable = tf.Variable(initializer(shape=shape))
+    return variable
+
+def create_biases(shape):
+    '''Create a bias variable with the specified name and shape and initialize
+    it to zero.'''
+    initializer = tf.constant_initializer(value=0.0, dtype=tf.float32)
+    return tf.Variable(initializer(shape=shape))
+
+def create_flatten_layer(layer):
+    layer_shape = layer.get_shape()
+    num_features = layer_shape[1:4].num_elements()
+    layer = tf.reshape(layer, [-1, num_features])
+    return layer
+
+def preprocessing(input, name):
+    with tf.variable_scope(name + '_1') as scope:
+        weights = create_weights(shape=[5, 5, 1, 32])
+        biases = create_biases([32])
+        layer = tf.nn.conv2d(input= input,
+                    filter= weights,
+                    strides=[1, 1, 1, 1],
+                    padding='SAME')
+        layer = tf.nn.bias_add(layer, biases)
+        conv1 = tf.nn.relu(layer, name = scope.name)
+
+    with tf.variable_scope(name + '_2') as scope:
+        weights = create_weights(shape=[5, 5, 32, 32])
+        biases = create_biases([32])
+        layer = tf.nn.conv2d(input=conv1,
+                     filter= weights,
+                     strides=[1, 1, 1, 1],
+                     padding='SAME')
+        layer = tf.nn.bias_add(layer, biases)
+        conv2 = tf.nn.relu(layer, name=scope.name)
+    
+    with tf.variable_scope(name + '_3') as scope:
+        pool = tf.nn.max_pool(conv1, ksize=[1, 3, 3, 1], strides=[1, 2, 2, 1],
+                         padding='SAME', name=scope.name)
+    return pool
+
+# Create model CNN
+# type = Data
+def CNN(inputs, type):
+    
+    input_a = tf.cond(tf.equal(type, utility.Data.CUSTOM.value), 
+        lambda: tf.reshape(inputs, [-1, 32, 32, 1]), lambda: tf.zeros([1, 32, 32, 1], tf.float32))
+    input_b = tf.cond(tf.equal(type, utility.Data.MNIST.value), 
+        lambda: tf.reshape(inputs, [-1, 28, 28, 1]), lambda: tf.zeros([1, 28, 28, 1], tf.float32))
+    input_c = tf.cond(tf.equal(type, utility.Data.STREET.value), 
+        lambda: tf.reshape(inputs, [-1, 32, 32, 3]), lambda: tf.zeros([1, 32, 32, 3], tf.float32))
+    
+    conv1a = preprocessing(input_a, 'conv1a')
+    conv1b = preprocessing(input_a, 'conv1b')
+    conv1c = preprocessing(input_c, 'conv1c')
+    
+    cases = [(tf.equal(type, utility.Data.CUSTOM.value), lambda: conv1a), (tf.equal(type, utility.Data.STREET.value), lambda: conv1c), 
+            (tf.equal(type, utility.Data.MNIST.value), lambda: conv1b)]
+    conv1 = tf.case(cases, lambda:conv1a)
+    conv1.set_shape([None, 32, 32, 32])
+
+    with tf.variable_scope('conv2') as scope:
+        weights = create_weights(shape=[5, 5, 32, 32])
+        biases = create_biases([32])
+        layer = tf.nn.conv2d(input=conv1,
+                     filter= weights,
+                     strides=[1, 1, 1, 1],
+                     padding='SAME')
+        layer = tf.nn.bias_add(layer, biases)
+        conv2 = tf.nn.relu(layer, name=scope.name)
+
+    with tf.variable_scope('pool2') as scope:
+        pool2 = tf.nn.max_pool(conv2, ksize=[1, 3, 3, 1], strides=[1, 2, 2, 1],
+                         padding='SAME', name=scope.name)
+
+    with tf.variable_scope('conv3') as scope:
+        weights = create_weights(shape=[5, 5, 32, 64])
+        biases = create_biases([64])
+        layer = tf.nn.conv2d(input=pool2,
+                     filter=weights,
+                     strides=[1, 1, 1, 1],
+                     padding='SAME')
+        layer = tf.nn.bias_add(layer, biases)
+        conv3 = tf.nn.relu(layer, name=scope.name)
+
+    with tf.variable_scope('pool3') as scope:
+        pool3 = tf.nn.max_pool(conv3, ksize=[1, 3, 3, 1], strides=[1, 2, 2, 1],
+                         padding='SAME', name=scope.name)
+    
+    with tf.variable_scope('flatten4') as scope:
+        layer_shape = pool3.get_shape()
+        num_features = layer_shape[1:].num_elements()
+        flatten4 = tf.reshape(pool3, [-1, num_features], name=scope.name)
+    
+    with tf.variable_scope('fc4') as scope:
+        weights = create_weights(shape=[num_features, 1024])
+        biases = create_biases([1024])
+        fc4 = tf.matmul(flatten4, weights) + biases
+
+    with tf.variable_scope('fc5') as scope:
+        weights = create_weights(shape=[1024, 10])
+        biases = create_biases([10])
+        outputs = tf.matmul(fc4, weights) + biases
+    return outputs
+
+def loss(logits, labels):
+    loss = tf.nn.softmax_cross_entropy_with_logits(
+                logits=logits,
+                labels=labels)
+    loss = tf.reshape(loss, [-1])
+    loss = tf.reduce_sum(loss)
+    tf.summary.scalar('loss', loss)
+    return loss
