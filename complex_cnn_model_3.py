@@ -105,14 +105,13 @@ def CNN(inputs, type):
         layer_shape = pool3.get_shape()
         num_features = layer_shape[1:].num_elements()
         flatten4 = tf.reshape(pool3, [-1, num_features], name=scope.name)
-        num_samples = layer_shape[0]
     
     flatten4_a = tf.cond(tf.equal(type, utility.Data.CUSTOM.value), 
-        lambda: flatten4, lambda: tf.zeros([num_samples, num_features], tf.float32))
+        lambda: flatten4, lambda: tf.zeros([1, num_features], tf.float32))
     flatten4_b = tf.cond(tf.equal(type, utility.Data.MNIST.value), 
-        lambda: flatten4, lambda: tf.zeros([num_samples, num_features], tf.float32))
+        lambda: flatten4, lambda: tf.zeros([1, num_features], tf.float32))
     flatten4_c = tf.cond(tf.equal(type, utility.Data.STREET.value), 
-        lambda: flatten4, lambda: tf.zeros([num_samples, num_features], tf.float32))
+        lambda: flatten4, lambda: tf.zeros([1, num_features], tf.float32))
 
     with tf.variable_scope('fc4a') as scope:
         weights = create_weights(shape=[num_features, 1024])
