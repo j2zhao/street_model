@@ -26,9 +26,9 @@ def create_flatten_layer(layer):
     layer = tf.reshape(layer, [-1, num_features])
     return layer
 
-def preprocessing(input, name):
+def preprocessing(input, name, channel = 1):
     with tf.variable_scope(name + '_1') as scope:
-        weights = create_weights(shape=[5, 5, 1, 32])
+        weights = create_weights(shape=[5, 5, channel, 32])
         biases = create_biases([32])
         layer = tf.nn.conv2d(input= input,
                     filter= weights,
@@ -60,12 +60,14 @@ def CNN(inputs, type):
         lambda: tf.reshape(inputs, [-1, 32, 32, 1]), lambda: tf.zeros([1, 32, 32, 1], tf.float32))
     input_b = tf.cond(tf.equal(type, utility.Data.MNIST.value), 
         lambda: tf.reshape(inputs, [-1, 28, 28, 1]), lambda: tf.zeros([1, 28, 28, 1], tf.float32))
+    paddings = tf.constant([[0, 0], [2, 2], [2, 2], [0, 0]])
+    input_b = tf.pad(input_b, paddings)
     input_c = tf.cond(tf.equal(type, utility.Data.STREET.value), 
         lambda: tf.reshape(inputs, [-1, 32, 32, 3]), lambda: tf.zeros([1, 32, 32, 3], tf.float32))
     
     conv1a = preprocessing(input_a, 'conv1a')
     conv1b = preprocessing(input_a, 'conv1b')
-    conv1c = preprocessing(input_c, 'conv1c')
+    conv1c = preprocessing(input_c, 'conv1c', channel = 3)
     
     cases = [(tf.equal(type, utility.Data.CUSTOM.value), lambda: conv1a), (tf.equal(type, utility.Data.STREET.value), lambda: conv1c), 
             (tf.equal(type, utility.Data.MNIST.value), lambda: conv1b)]
