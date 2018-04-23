@@ -84,7 +84,7 @@ def CNN(inputs, type):
         conv2 = tf.nn.relu(layer, name=scope.name)
 
     with tf.variable_scope('pool2') as scope:
-        pool2 = tf.nn.max_pool(conv1, ksize=[1, 3, 3, 1], strides=[1, 2, 2, 1],
+        pool2 = tf.nn.max_pool(conv2, ksize=[1, 3, 3, 1], strides=[1, 2, 2, 1],
                          padding='SAME', name=scope.name)
 
     with tf.variable_scope('conv3') as scope:
@@ -117,7 +117,6 @@ def CNN(inputs, type):
         weights = create_weights(shape=[num_features, 1024])
         biases = create_biases([1024])
         fc4a = tf.matmul(flatten4_a, weights) + biases
-
     with tf.variable_scope('fc5a') as scope:
         weights = create_weights(shape=[1024, 10])
         biases = create_biases([10])
