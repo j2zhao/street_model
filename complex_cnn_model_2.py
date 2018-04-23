@@ -48,7 +48,7 @@ def preprocessing(input, name, channel = 1):
         conv2 = tf.nn.relu(layer, name=scope.name)
     
     with tf.variable_scope(name + '_3') as scope:
-        pool = tf.nn.max_pool(conv1, ksize=[1, 3, 3, 1], strides=[1, 2, 2, 1],
+        pool = tf.nn.max_pool(conv1, ksize=[1, 3, 3, 1], strides=[1, 1, 1, 1],
                          padding='SAME', name=scope.name)
     return pool
 
