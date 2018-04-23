@@ -112,7 +112,7 @@ def CNN(inputs, type):
     flatten4_b = tf.cond(tf.equal(type, utility.Data.MNIST.value), 
         lambda: flatten4, lambda: tf.zeros([num_samples, num_features], tf.float32))
     flatten4_c = tf.cond(tf.equal(type, utility.Data.STREET.value), 
-        lambda: flatten4, lambda: [num_samples, num_features], tf.float32))
+        lambda: flatten4, lambda: tf.zeros([num_samples, num_features], tf.float32))
 
     with tf.variable_scope('fc4a') as scope:
         weights = create_weights(shape=[num_features, 1024])
