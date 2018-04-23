@@ -48,7 +48,7 @@ def preprocessing(input, name, channel = 1):
         conv2 = tf.nn.relu(layer, name=scope.name)
     
     with tf.variable_scope(name + '_3') as scope:
-        pool = tf.nn.max_pool(conv1, ksize=[1, 3, 3, 1], strides=[1, 1, 1, 1],
+        pool = tf.nn.max_pool(conv2, ksize=[1, 3, 3, 1], strides=[1, 1, 1, 1],
                          padding='SAME', name=scope.name)
     return pool
 
@@ -66,7 +66,7 @@ def CNN(inputs, type):
         lambda: tf.reshape(inputs, [-1, 32, 32, 3]), lambda: tf.zeros([1, 32, 32, 3], tf.float32))
     
     conv1a = preprocessing(input_a, 'conv1a')
-    conv1b = preprocessing(input_a, 'conv1b')
+    conv1b = preprocessing(input_b, 'conv1b')
     conv1c = preprocessing(input_c, 'conv1c', channel = 3)
     
     cases = [(tf.equal(type, utility.Data.CUSTOM.value), lambda: conv1a), (tf.equal(type, utility.Data.STREET.value), lambda: conv1c), 
