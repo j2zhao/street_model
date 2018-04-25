@@ -25,7 +25,10 @@ def create_flatten_layer(layer):
 # Create model CNN
 # type = 
 def CNN(inputs, is_training=True):
-    inputs = tf.reshape(inputs, [-1, 32, 32, 3])
+    #inputs = tf.reshape(inputs, [-1, 32, 32, 3])
+    inputs = tf.reshape(inputs, [-1, 28, 28, 3])
+    paddings = tf.constant([[0, 0], [2, 2], [2, 2], [0, 0]])
+    inputs = tf.pad(inputs, paddings)
     with tf.variable_scope('conv1a') as scope:
         weights = create_weights(shape=[5, 5, 3, 32])
         biases = create_biases([32])

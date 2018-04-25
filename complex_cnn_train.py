@@ -4,11 +4,11 @@ import tensorflow as tf
 import tensorflow.contrib.slim as slim
 import utility
 import scipy.io
-import complex_cnn_model_1 as cnn_model
+import complex_cnn_model_3 as cnn_model
 import time
 
-MODEL_DIRECTORY = "model_1/model.ckpt"
-LOGS_DIRECTORY = "logs_1/train"
+MODEL_DIRECTORY = "model_3/model.ckpt"
+LOGS_DIRECTORY = "logs_3/train"
 
 # Params for Train
 training_epochs = 20 # 10 for augmented training data, 20 for training data
